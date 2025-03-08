@@ -6,63 +6,63 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score, confusion_matrix
 import matplotlib.pyplot as plt
 import seaborn as sns
+import pandas as pd
+import os
 
 import dagshub
-dagshub.init(repo_owner='yogesh kumar saini', repo_name='mlflow-dagshub-demo', mlflow=True)
+from mlflow.models.signature import infer_signature
 
-mlflow.set_tracking_uri("https://dagshub.com/YogeshKumar-saini/mlflow-daghub.mlflow\
-")
+# Initialize Dagshub tracking
+dagshub.init(repo_owner='YogeshKumar-saini', repo_name='mlflow-dagshub-demo', mlflow=True)
+mlflow.set_tracking_uri("https://dagshub.com/YogeshKumar-saini/mlflow-dagshub-demo.mlflow")
 
 # Load the iris dataset
 iris = load_iris()
 X = iris.data
 y = iris.target
 
-# Split the dataset into training and testing sets
+# Split the dataset
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-# Define the parameters for the Random Forest model
-max_depth = 1
+# Define model parameter
+max_depth = 10
 
-# apply mlflow
-
+# Start MLflow experiment
 mlflow.set_experiment('iris-dt')
 
 with mlflow.start_run():
-
     dt = DecisionTreeClassifier(max_depth=max_depth)
-
     dt.fit(X_train, y_train)
-
     y_pred = dt.predict(X_test)
-
     accuracy = accuracy_score(y_test, y_pred)
 
+    # Log parameters and metrics
+    mlflow.log_param('max_depth', max_depth)
     mlflow.log_metric('accuracy', accuracy)
 
-    mlflow.log_param('max_depth', max_depth)
-
-    # Create a confusion matrix plot
+    # Create and save confusion matrix
     cm = confusion_matrix(y_test, y_pred)
-    plt.figure(figsize=(6,6))
+    plt.figure(figsize=(6, 6))
     sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', xticklabels=iris.target_names, yticklabels=iris.target_names)
     plt.ylabel('Actual')
     plt.xlabel('Predicted')
     plt.title('Confusion Matrix')
     
-    # Save the plot as an artifact
-    plt.savefig("confusion_matrix.png")
+    plot_path = "confusion_matrix.png"
+    plt.savefig(plot_path)
+    plt.close()
 
-    # mlflow code
-    mlflow.log_artifact("confusion_matrix.png")
+    mlflow.log_artifact(plot_path)
 
-    mlflow.log_artifact(__file__)
+    # ✅ Add Input Example & Signature
+    input_example = pd.DataFrame(X_test[:1], columns=iris.feature_names)
+    signature = infer_signature(X_test, y_pred)
 
-    mlflow.sklearn.log_model(dt, "decision tree")
+    mlflow.sklearn.log_model(dt, "decision_tree_model", input_example=input_example, signature=signature)
 
-    mlflow.set_tag('author','nitish')
-    mlflow.set_tag('model','decision tree')
+    # Add metadata
+    mlflow.set_tag('author', 'Yogesh')
+    mlflow.set_tag('model', 'Decision Tree')
 
-    print('accuracy', accuracy)
-
+    print('Model Accuracy:', accuracy)
 
